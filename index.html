@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galeri Unlock Foto - Aman, BCA & GoPay</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes spinSlow {
+      to { transform: rotate(360deg); }
+    }
+    .spinner-smooth {
+      animation: spinSlow 0.85s linear infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen p-4 sm:p-8 selection:bg-blue-600 selection:text-white flex flex-col justify-between">
+
+  <!-- Loading Screen Simple -->
+  <div id="loadingScreen" class="fixed inset-0 z-[100] bg-gray-950 flex flex-col items-center justify-center transition-opacity duration-500">
+    <div class="w-11 h-11 rounded-full border-4 border-gray-800 border-t-blue-500 spinner-smooth mb-3"></div>
+    <p class="text-sm font-medium text-gray-300 tracking-wide">Memuat Galeri &amp; Sistem Pembayaran...</p>
+    <p class="text-[11px] text-gray-500 mt-1">Memeriksa integritas keamanan</p>
+  </div>
+
+  <div class="max-w-4xl w-full mx-auto">
+    <!-- Header -->
+    <div class="flex flex-wrap justify-between items-center gap-4 mb-8 pb-4 border-b border-gray-800">
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Galeri Foto Eksklusif</h1>
+          <span class="text-[11px] bg-emerald-950/80 border border-emerald-800/60 text-emerald-300 px-2 py-0.5 rounded-full font-semibold">
+            Security Active
+          </span>
+        </div>
+        <p class="text-xs sm:text-sm text-gray-400 mt-1">
+          Preview tajam ber-watermark kustom • Bayar via BCA / GoPay &amp; konfirmasi kode untuk akses Google Drive
+        </p>
+      </div>
+
+      <!-- Kontrol Akses Admin -->
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          id="btnTambahFoto"
+          onclick="bukaFormUpload()"
+          class="hidden bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer"
+        >
+          + Upload Thumbnail &amp; Drive
+        </button>
+
+        <button
+          type="button"
+          id="btnLoginAdmin"
+          onclick="bukaModalAdmin()"
+          class="bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-200 hover:text-white px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+        >
+          <span>Login Admin</span>
+        </button>
+
+        <button
+          type="button"
+          id="btnLogoutAdmin"
+          onclick="logoutAdmin()"
+          class="hidden bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-300 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer"
+        >
+          Logout Admin
+        </button>
+      </div>
+    </div>
+
+    <!-- Banner Peringatan Keamanan Jika Terdeteksi Manipulasi -->
+    <div id="bannerSecurityAlert" class="hidden bg-red-950/70 border border-red-800 text-red-200 text-xs px-4 py-3 rounded-xl mb-6">
+      <strong>Peringatan Keamanan:</strong> Terdeteksi perubahan tidak sah pada konfigurasi pembayaran atau media sosial. Akses pembayaran dikunci sementara.
+    </div>
+
+    <!-- Banner & Panel Backup JSON Mode Admin -->
+    <div id="panelAdminBar" class="hidden bg-blue-950/40 border border-blue-800/60 text-blue-200 text-xs px-4 py-3 rounded-xl mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <span>Mode Admin aktif — Kelola thumbnail, watermark, dan backup JSON katalog.</span>
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onclick="eksporBackupJson()"
+          class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer"
+        >
+          Ekspor Backup JSON
+        </button>
+        <button
+          type="button"
+          onclick="picuImporBackupJson()"
+          class="bg-amber-500 hover:bg-amber-600 text-black px-3 py-1.5 rounded-lg font-bold transition cursor-pointer"
+        >
+          Impor Backup JSON
+        </button>
+        <input
+          id="inputFileBackupJson"
+          type="file"
+          accept=".json,application/json"
+          onchange="prosesImporBackupJson(event)"
+          class="hidden"
+        />
+      </div>
+    </div>
+
+    <!-- Form Upload Thumbnail & Custom Watermark (Hanya Admin) -->
+    <div id="formUpload" class="hidden bg-gray-900 p-6 rounded-2xl mb-8 border border-gray-800 shadow-xl">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold">Tambah Foto Baru &amp; Kustomisasi Watermark</h2>
+        <button type="button" onclick="bukaFormUpload()" class="text-xs text-gray-400 hover:text-white cursor-pointer">Tutup</button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+        <div>
+          <label class="block text-gray-300 mb-1">Judul Foto *</label>
+          <input
+            id="inputJudul"
+            type="text"
+            placeholder="Contoh: Paket Foto HD Sunset"
+            class="w-full p-2.5 rounded-xl bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        <div>
+          <label class="block text-gray-300 mb-1">Harga *</label>
+          <input
+            id="inputHarga"
+            type="text"
+            placeholder="Contoh: Rp 25.000"
+            class="w-full p-2.5 rounded-xl bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        <div class="sm:col-span-2">
+          <label class="block text-gray-300 mb-1">Link Google Drive Foto Asli *</label>
+          <input
+            id="inputDrive"
+            type="url"
+            placeholder="https://drive.google.com/..."
+            class="w-full p-2.5 rounded-xl bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        <div>
+          <label class="block text-gray-300 mb-1">Kode Konfirmasi Foto</label>
+          <input
+            id="inputKode"
+            type="text"
+            placeholder="Kosongkan untuk pakai kode utama"
+            class="w-full p-2.5 rounded-xl bg-gray-800 border border-gray-700 text-white uppercase focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        <div>
+          <label class="block text-gray-300 mb-1">File Thumbnail (Tanpa Blur) *</label>
+          <input
+            id="inputThumb"
+            type="file"
+            accept="image/*"
+            onchange="muatGambarUpload(event)"
+            class="w-full p-2 rounded-xl bg-gray-800 border border-gray-700 text-gray-200 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+          />
+        </div>
+
+        <!-- Panel Custom Watermark saat Upload -->
+        <div class="sm:col-span-2 bg-gray-950/80 border border-gray-800 rounded-xl p-4 space-y-3">
+          <div class="flex justify-between items-center">
+            <span class="font-semibold text-xs uppercase tracking-wider text-yellow-400">Pengaturan Auto &amp; Custom Watermark</span>
+            <button
+              type="button"
+              onclick="resetUploadWatermark()"
+              class="text-xs text-gray-400 hover:text-white cursor-pointer"
+            >
+              Reset Default
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Teks Watermark</label>
+              <input
+                id="inputWatermarkText"
+                type="text"
+                value="PREVIEW • LOCKED"
+                oninput="perbaruiPreviewUpload()"
+                class="w-full p-2 rounded-lg bg-gray-900 border border-gray-700 text-white text-xs focus:outline-none focus:border-yellow-400"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Gaya / Posisi Watermark</label>
+              <select
+                id="inputWatermarkStyle"
+                onchange="perbaruiPreviewUpload()"
+                class="w-full p-2 rounded-lg bg-gray-900 border border-gray-700 text-white text-xs focus:outline-none focus:border-yellow-400"
+              >
+                <option value="diagonal">Diagonal Berulang</option>
+                <option value="center">Tengah (Banner)</option>
+                <option value="bottom-right">Pojok Kanan Bawah</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">
+                Transparansi: <span id="labelUploadOpacity" class="text-white font-semibold">45%</span>
+              </label>
+              <input
+                id="inputWatermarkOpacity"
+                type="range"
+                min="15"
+                max="90"
+                value="45"
+                oninput="perbaruiPreviewUpload()"
+                class="w-full accent-yellow-400 cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">
+                Ukuran Teks: <span id="labelUploadScale" class="text-white font-semibold">100%</span>
+              </label>
+              <input
+                id="inputWatermarkScale"
+                type="range"
+                min="60"
+                max="160"
+                value="100"
+                oninput="perbaruiPreviewUpload()"
+                class="w-full accent-yellow-400 cursor-pointer"
+              />
+            </div>
+          </div>
+
+          <div id="wrapPreviewUpload" class="hidden pt-2">
+            <label class="block text-xs text-gray-400 mb-1.5">Live Preview Thumbnail (Sudah Ber-Watermark):</label>
+            <div class="max-w-xs rounded-xl overflow-hidden border border-gray-800 bg-black">
+              <img id="imgPreviewUpload" src="" alt="Preview Watermark" class="w-full h-44 object-cover" />
+            </div>
+          </div>
+        </div>
+
+        <div class="sm:col-span-2 pt-2">
+          <button
+            type="button"
+            id="btnSimpan"
+            onclick="tambahFoto()"
+            class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold transition cursor-pointer"
+          >
+            Simpan Thumbnail &amp; Link Drive ke Galeri
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Daftar Foto -->
+    <div id="galeri" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </div>
+
+  <!-- Footer dengan Logo Sosmed (TikTok & Instagram) Bisa Diklik -->
+  <footer class="max-w-4xl w-full mx-auto mt-12 pt-6 border-t border-gray-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
+    <p>Ikuti media sosial resmi kami:</p>
+    <div class="flex items-center gap-3">
+      <!-- Logo TikTok -->
+      <a
+        id="linkSosmedTiktok"
+        href="https://www.tiktok.com/@usernameanda"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="TikTok"
+        class="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 text-white px-3.5 py-2 rounded-xl transition"
+      >
+        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+        </svg>
+        <span class="font-semibold">TikTok</span>
+      </a>
+
+      <!-- Logo Instagram -->
+      <a
+        id="linkSosmedInstagram"
+        href="https://www.instagram.com/usernameanda"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Instagram"
+        class="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 text-white px-3.5 py-2 rounded-xl transition"
+      >
+        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+        </svg>
+        <span class="font-semibold">Instagram</span>
+      </a>
+    </div>
+  </footer>
+
+  <!-- Modal Custom Watermark Setelah Upload (Hanya Admin) -->
+  <div id="modalEditWatermark" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+      <h2 class="text-lg font-bold text-center mb-1">Custom Watermark Thumbnail</h2>
+      <p id="editWmJudulFoto" class="text-xs text-gray-400 text-center mb-4 truncate"></p>
+
+      <div class="space-y-3 text-xs mb-4">
+        <div>
+          <label class="block text-gray-300 mb-1">Teks Watermark</label>
+          <input
+            id="editWmText"
+            type="text"
+            oninput="perbaruiPreviewEditWm()"
+            class="w-full p-2.5 rounded-xl bg-gray-950 border border-gray-700 text-white focus:outline-none focus:border-yellow-400"
+          />
+        </div>
+
+        <div>
+          <label class="block text-gray-300 mb-1">Gaya / Posisi Watermark</label>
+          <select
+            id="editWmStyle"
+            onchange="perbaruiPreviewEditWm()"
+            class="w-full p-2.5 rounded-xl bg-gray-950 border border-gray-700 text-white focus:outline-none focus:border-yellow-400"
+          >
+            <option value="diagonal">Diagonal Berulang</option>
+            <option value="center">Tengah (Banner)</option>
+            <option value="bottom-right">Pojok Kanan Bawah</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-gray-300 mb-1">
+            Transparansi: <span id="labelEditWmOpacity" class="text-white font-semibold">45%</span>
+          </label>
+          <input
+            id="editWmOpacity"
+            type="range"
+            min="15"
+            max="90"
+            value="45"
+            oninput="perbaruiPreviewEditWm()"
+            class="w-full accent-yellow-400 cursor-pointer"
+          />
+        </div>
+
+        <div>
+          <label class="block text-gray-300 mb-1">
+            Ukuran Teks: <span id="labelEditWmScale" class="text-white font-semibold">100%</span>
+          </label>
+          <input
+            id="editWmScale"
+            type="range"
+            min="60"
+            max="160"
+            value="100"
+            oninput="perbaruiPreviewEditWm()"
+            class="w-full accent-yellow-400 cursor-pointer"
+          />
+        </div>
+
+        <div class="rounded-xl overflow-hidden border border-gray-800 bg-black">
+          <img id="imgPreviewEditWm" src="" alt="Preview Edit Watermark" class="w-full h-40 object-cover" />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        id="btnSimpanEditWm"
+        onclick="simpanEditWatermark()"
+        class="w-full bg-yellow-500 hover:bg-yellow-600 text-black py-2.5 rounded-xl font-bold text-sm transition cursor-pointer"
+      >
+        Terapkan Watermark Baru
+      </button>
+      <button
+        type="button"
+        onclick="tutupModalEditWatermark()"
+        class="w-full text-center text-gray-400 hover:text-white text-xs pt-3 cursor-pointer"
+      >
+        Batal
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Login Admin -->
+  <div id="modalAdmin" class="fixed inset-0 bg-black/85 hidden items-center justify-center p-4 z-50">
+    <div class="bg-gray-900 border-2 border-blue-800/70 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+      <div class="flex items-center justify-center gap-2 mb-1">
+        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+        <h2 class="text-lg font-bold text-center text-white">Autentikasi Admin</h2>
+      </div>
+      <p class="text-xs text-gray-400 text-center mb-4">
+        Masukkan password admin untuk mengunggah, mengedit watermark, backup JSON, atau menghapus foto.
+      </p>
+
+      <label for="inputPasswordAdmin" class="block text-xs font-semibold text-gray-300 mb-1.5">
+        Password Admin
+      </label>
+      <div class="relative mb-2">
+        <input
+          id="inputPasswordAdmin"
+          type="password"
+          placeholder="Ketik password admin di sini..."
+          oninput="cekCapsLock(event)"
+          onkeyup="cekCapsLock(event)"
+          onkeydown="if(event.key === 'Enter') prosesLoginAdmin()"
+          class="w-full p-3 pr-16 rounded-xl bg-gray-950 border border-gray-600 text-white text-sm tracking-wide focus:outline-none focus:border-blue-400"
+        />
+        <button
+          type="button"
+          id="btnTogglePass"
+          onclick="toggleLihatPassword()"
+          class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold bg-gray-800 hover:bg-gray-700 text-gray-200 px-2.5 py-1 rounded-lg border border-gray-700 cursor-pointer"
+        >
+          Lihat
+        </button>
+      </div>
+
+      <p id="infoCapsLock" class="text-amber-400 text-[11px] mb-2 hidden">
+        Perhatian: Caps Lock sedang aktif.
+      </p>
+
+      <p id="pesanErrorAdmin" class="text-red-400 text-xs mb-3 hidden bg-red-950/50 border border-red-900/70 rounded-lg px-3 py-2"></p>
+
+      <button
+        type="button"
+        id="btnSubmitAdmin"
+        onclick="prosesLoginAdmin()"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-sm transition cursor-pointer"
+      >
+        Masuk ke Mode Admin
+      </button>
+      <button
+        type="button"
+        onclick="tutupModalAdmin()"
+        class="w-full text-center text-gray-400 hover:text-white text-xs pt-3 cursor-pointer"
+      >
+        Batal
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Pembayaran 2 Rekening (BCA & GoPay) + Konfirmasi Kode -->
+  <div id="modalBayar" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+      <div class="text-center mb-4">
+        <h2 class="text-xl font-bold">Pilih Metode Pembayaran</h2>
+        <p id="modalInfoFoto" class="text-sm text-gray-300 mt-1"></p>
+      </div>
+
+      <!-- Tombol Pilihan 2 Rekening: BCA & GoPay -->
+      <div class="grid grid-cols-2 gap-2 mb-3">
+        <button
+          type="button"
+          id="tabBca"
+          onclick="pilihMetode('bca')"
+          class="py-2 px-3 rounded-xl text-xs font-bold border transition cursor-pointer bg-blue-600 border-blue-500 text-white"
+        >
+          Bank BCA
+        </button>
+        <button
+          type="button"
+          id="tabGopay"
+          onclick="pilihMetode('gopay')"
+          class="py-2 px-3 rounded-xl text-xs font-bold border transition cursor-pointer bg-gray-950 border-gray-700 text-gray-300 hover:bg-gray-800"
+        >
+          GoPay
+        </button>
+      </div>
+
+      <!-- Kotak Detail Rekening Aktif -->
+      <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 mb-4">
+        <div class="flex justify-between items-center text-xs text-gray-400 mb-1">
+          <span id="labelJenisAkun">Nomor Rekening BCA</span>
+          <span id="rekMetodeBadge" class="font-bold text-yellow-400 text-sm">BCA</span>
+        </div>
+
+        <div class="flex justify-between items-center my-2.5">
+          <div>
+            <span id="rekNomor" class="text-lg font-mono font-bold tracking-wider text-white select-all"></span>
+          </div>
+          <button
+            type="button"
+            onclick="salinRekening()"
+            id="btnSalinRek"
+            class="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer"
+          >
+            Salin
+          </button>
+        </div>
+
+        <div class="text-xs text-gray-300 border-t border-gray-800 pt-2 mt-2">
+          Atas Nama: <span id="rekNama" class="font-semibold text-white"></span>
+        </div>
+      </div>
+
+      <!-- Langkah 1: Konfirmasi Bukti ke WhatsApp -->
+      <a
+        id="btnWa"
+        href="#"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="block text-center w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl font-semibold text-sm mb-4 transition"
+      >
+        1. Kirim Bukti Bayar ke WhatsApp
+      </a>
+
+      <!-- Langkah 2: Masukkan Kode Konfirmasi -->
+      <div class="text-left border-t border-gray-800 pt-4">
+        <label class="block text-xs text-gray-300 mb-1.5">
+          2. Masukkan Kode Konfirmasi setelah disetujui:
+        </label>
+        <input
+          id="inputKodeKonfirmasi"
+          type="text"
+          placeholder="Masukkan kode konfirmasi"
+          class="w-full p-2.5 rounded-xl bg-gray-950 border border-gray-700 text-white text-sm mb-2 uppercase focus:outline-none focus:border-yellow-400"
+        />
+        <p id="pesanErrorKode" class="text-red-400 text-xs mb-2 hidden"></p>
+
+        <button
+          type="button"
+          id="btnKonfirmasiBayar"
+          onclick="verifikasiDanBuka()"
+          class="w-full bg-yellow-500 hover:bg-yellow-600 text-black py-2.5 rounded-xl font-bold text-sm transition cursor-pointer"
+        >
+          Konfirmasi &amp; Buka Foto
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onclick="tutupModal()"
+        class="w-full text-center text-gray-400 hover:text-white text-xs pt-3 mt-1 cursor-pointer"
+      >
+        Tutup
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // KONFIGURASI UTAMA (SILAKAN SESUAIKAN)
+    // ==========================================
+    const ADMIN_PASSWORD_PLAIN = "ValueZp49"; // GANTI DENGAN PASSWORD ADMIN ANDA
+    const ADMIN_SALT = "galeri_unlock_salt_2026";
+
+    const SOSMED_LINKS_RESMI = Object.freeze({
+      tiktok: "https://www.tiktok.com/@zeproxypg",
+      instagram: "https://www.instagram.com/zeproxypg"
+    });
+
+    const PAYMENT_CONFIG_RESMI = Object.freeze({
+      bca: Object.freeze({
+        namaMetode: "BCA",
+        labelNomor: "Nomor Rekening BCA",
+        nomor: "2810806349",
+        atasNama: " ADITYA FAUZANI "
+      }),
+      gopay: Object.freeze({
+        namaMetode: "GoPay",
+        labelNomor: "Nomor HP / Akun GoPay",
+        nomor: "6282215735560",
+        atasNama: "ADITYA FAUZANI"
+      }),
+      wa: "6282129687945", // Format: 628xxxxxxxxxx (tanpa + atau spasi)
+      defaultCode: "OK123"
+    });
+
+    const WATERMARK_DEFAULT = Object.freeze({
+      text: "PREVIEW • LOCKED",
+      style: "diagonal",
+      opacity: 45,
+      scale: 100
+    });
+
+    const STORAGE_KEY = "galeri_unlock_foto_secure_v5";
+
+    let adminPasswordHashHex = "";
+
+    async function hashPassword(plainText) {
+      const data = new TextEncoder().encode(`${ADMIN_SALT}:${String(plainText)}`);
+      if (window.crypto && window.crypto.subtle) {
+        const digest = await window.crypto.subtle.digest("SHA-256", data);
+        return Array.from(new Uint8Array(digest))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+      }
+      let h = 2166136261;
+      for (let i = 0; i < data.length; i++) {
+        h ^= data[i];
+        h = Math.imul(h, 16777619);
+      }
+      return (h >>> 0).toString(16);
+    }
+
+    function terapkanLinkSosmed() {
+      const elTiktok = document.getElementById("linkSosmedTiktok");
+      const elInstagram = document.getElementById("linkSosmedInstagram");
+      if (elTiktok && SOSMED_LINKS_RESMI.tiktok) elTiktok.href = SOSMED_LINKS_RESMI.tiktok;
+      if (elInstagram && SOSMED_LINKS_RESMI.instagram) elInstagram.href = SOSMED_LINKS_RESMI.instagram;
+    }
+
+    function hitungSignatureKonfigurasi() {
+      return JSON.stringify({
+        bcaNomor: PAYMENT_CONFIG_RESMI.bca.nomor,
+        bcaNama: PAYMENT_CONFIG_RESMI.bca.atasNama,
+        gopayNomor: PAYMENT_CONFIG_RESMI.gopay.nomor,
+        gopayNama: PAYMENT_CONFIG_RESMI.gopay.atasNama,
+        wa: PAYMENT_CONFIG_RESMI.wa,
+        defaultCode: PAYMENT_CONFIG_RESMI.defaultCode,
+        tiktok: SOSMED_LINKS_RESMI.tiktok,
+        instagram: SOSMED_LINKS_RESMI.instagram
+      });
+    }
+
+    const KONFIGURASI_SIGNATURE_ASLI = hitungSignatureKonfigurasi();
+
+    function validasiIntegritasKonfigurasi() {
+      const signatureSekarang = hitungSignatureKonfigurasi();
+      const alertBanner = document.getElementById("bannerSecurityAlert");
+      if (signatureSekarang !== KONFIGURASI_SIGNATURE_ASLI) {
+        if (alertBanner) alertBanner.classList.remove("hidden");
+        return false;
+      }
+      if (alertBanner) alertBanner.classList.add("hidden");
+      return true;
+    }
+
+    function ambilRekeningAman(metode) {
+      validasiIntegritasKonfigurasi();
+      if (metode === "gopay") {
+        return {
+          namaMetode: PAYMENT_CONFIG_RESMI.gopay.namaMetode,
+          labelNomor: PAYMENT_CONFIG_RESMI.gopay.labelNomor,
+          nomor: String(PAYMENT_CONFIG_RESMI.gopay.nomor).trim(),
+          atasNama: PAYMENT_CONFIG_RESMI.gopay.atasNama
+        };
+      }
+      return {
+        namaMetode: PAYMENT_CONFIG_RESMI.bca.namaMetode,
+        labelNomor: PAYMENT_CONFIG_RESMI.bca.labelNomor,
+        nomor: String(PAYMENT_CONFIG_RESMI.bca.nomor).trim(),
+        atasNama: PAYMENT_CONFIG_RESMI.bca.atasNama
+      };
+    }
+
+    function adalahLinkGoogleDriveValid(urlStr) {
+      try {
+        const parsed = new URL(urlStr);
+        return (
+          parsed.protocol === "https:" &&
+          (parsed.hostname === "drive.google.com" || parsed.hostname.endsWith(".google.com"))
+        );
+      } catch (_) {
+        return false;
+      }
+    }
+
+    let fotoDipilihIndex = null;
+    let editWatermarkIndex = null;
+    let metodeAktif = "bca";
+    let isAdmin = sessionStorage.getItem("is_admin_logged_in") === "true";
+
+    let gagalKodeCount = 0;
+    let kodeCooldownUntil = 0;
+    let gagalAdminCount = 0;
+    let adminCooldownUntil = 0;
+
+    let rawUploadImageDataUrl = "";
+    let currentWatermarkedUploadUrl = "";
+    let currentPreviewEditWmUrl = "";
+
+    let daftarFoto = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [
+      {
+        id: 1,
+        judul: "Koleksi Foto HD Contoh",
+        harga: "Rp 15.000",
+        thumbnail: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800",
+        rawImage: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800",
+        watermark: { ...WATERMARK_DEFAULT },
+        isDefaultSample: true,
+        driveLink: "https://drive.google.com/",
+        kode: PAYMENT_CONFIG_RESMI.defaultCode,
+        unlocked: false
+      }
+    ];
+
+    function simpanData() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(daftarFoto));
+        return true;
+      } catch (_) {
+        alert(
+          "Penyimpanan browser (localStorage) penuh karena ukuran foto terlalu besar. Coba hapus beberapa foto lama atau gunakan foto berukuran lebih kecil."
+        );
+        return false;
+      }
+    }
+
+    function eksporBackupJson() {
+      if (!isAdmin) return alert("Akses ditolak. Hanya Admin yang dapat mengekspor backup JSON.");
+
+      const payload = {
+        app: "galeri_unlock_foto",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        items: daftarFoto
+      };
+
+      const jsonStr = JSON.stringify(payload, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      const tanggal = new Date().toISOString().slice(0, 10);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `backup-galeri-foto-${tanggal}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function picuImporBackupJson() {
+      if (!isAdmin) return alert("Akses ditolak. Hanya Admin yang dapat mengimpor backup JSON.");
+      const inputFile = document.getElementById("inputFileBackupJson");
+      if (inputFile) {
+        inputFile.value = "";
+        inputFile.click();
+      }
+    }
+
+    function prosesImporBackupJson(event) {
+      if (!isAdmin) return alert("Akses ditolak. Hanya Admin yang dapat mengimpor backup JSON.");
+
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const parsed = JSON.parse(String(e.target.result || "{}"));
+          const rawItems = Array.isArray(parsed)
+            ? parsed
+            : Array.isArray(parsed.items)
+            ? parsed.items
+            : null;
+
+          if (!rawItems) {
+            return alert("Format file JSON tidak valid. Pastikan file berasal dari Ekspor Backup JSON.");
+          }
+
+          const itemsBersih = rawItems
+            .filter((item) => item && typeof item === "object")
+            .map((item, idx) => {
+              const judul = String(item.judul || `Foto ${idx + 1}`).trim();
+              const harga = String(item.harga || "Rp 15.000").trim();
+              const thumbnail = String(item.thumbnail || "").trim();
+              const rawImage = String(item.rawImage || thumbnail).trim();
+              const driveLink = String(item.driveLink || "https://drive.google.com/").trim();
+              const kode = String(item.kode || PAYMENT_CONFIG_RESMI.defaultCode)
+                .trim()
+                .toUpperCase();
+
+              const wm = item.watermark && typeof item.watermark === "object"
+                ? {
+                    text: String(item.watermark.text || WATERMARK_DEFAULT.text),
+                    style: ["diagonal", "center", "bottom-right"].includes(item.watermark.style)
+                      ? item.watermark.style
+                      : WATERMARK_DEFAULT.style,
+                    opacity: Math.min(90, Math.max(15, Number(item.watermark.opacity) || WATERMARK_DEFAULT.opacity)),
+                    scale: Math.min(160, Math.max(60, Number(item.watermark.scale) || WATERMARK_DEFAULT.scale))
+                  }
+                : { ...WATERMARK_DEFAULT };
+
+              return {
+                id: item.id || Date.now() + idx,
+                judul,
+                harga,
+                thumbnail,
+                rawImage,
+                watermark: wm,
+                isDefaultSample: Boolean(item.isDefaultSample),
+                driveLink: adalahLinkGoogleDriveValid(driveLink) ? driveLink : "https://drive.google.com/",
+                kode,
+                unlocked: Boolean(item.unlocked)
+              };
+            })
+            .filter((item) => Boolean(item.thumbnail));
+
+          if (!confirm(`Impor ${itemsBersih.length} item foto dari file backup JSON? Data galeri saat ini akan diganti.`)) {
+            return;
+          }
+
+          daftarFoto = itemsBersih;
+          simpanData();
+          renderGaleri();
+          alert("Backup JSON berhasil dipulihkan!");
+        } catch (_) {
+          alert("Gagal membaca file JSON. Pastikan isi file tidak rusak.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function perbaruiTampilanAkses() {
+      const btnTambah = document.getElementById("btnTambahFoto");
+      const btnLogin = document.getElementById("btnLoginAdmin");
+      const btnLogout = document.getElementById("btnLogoutAdmin");
+      const panelAdminBar = document.getElementById("panelAdminBar");
+      const formUpload = document.getElementById("formUpload");
+
+      if (isAdmin) {
+        btnTambah.classList.remove("hidden");
+        btnLogout.classList.remove("hidden");
+        panelAdminBar.classList.remove("hidden");
+        btnLogin.classList.add("hidden");
+      } else {
+        btnTambah.classList.add("hidden");
+        btnLogout.classList.add("hidden");
+        panelAdminBar.classList.add("hidden");
+        formUpload.classList.add("hidden");
+        btnLogin.classList.remove("hidden");
+      }
+      renderGaleri();
+    }
+
+    function toggleLihatPassword() {
+      const inputPass = document.getElementById("inputPasswordAdmin");
+      const btnToggle = document.getElementById("btnTogglePass");
+      if (inputPass.type === "password") {
+        inputPass.type = "text";
+        btnToggle.innerText = "Sembunyi";
+      } else {
+        inputPass.type = "password";
+        btnToggle.innerText = "Lihat";
+      }
+    }
+
+    function cekCapsLock(event) {
+      const capsEl = document.getElementById("infoCapsLock");
+      if (!capsEl || !event || typeof event.getModifierState !== "function") return;
+      if (event.getModifierState("CapsLock")) {
+        capsEl.classList.remove("hidden");
+      } else {
+        capsEl.classList.add("hidden");
+      }
+    }
+
+    function bukaModalAdmin() {
+      const inputPass = document.getElementById("inputPasswordAdmin");
+      const btnToggle = document.getElementById("btnTogglePass");
+      inputPass.value = "";
+      inputPass.type = "password";
+      if (btnToggle) btnToggle.innerText = "Lihat";
+      document.getElementById("pesanErrorAdmin").classList.add("hidden");
+      document.getElementById("infoCapsLock").classList.add("hidden");
+
+      const modal = document.getElementById("modalAdmin");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      setTimeout(() => inputPass.focus(), 100);
+    }
+
+    function tutupModalAdmin() {
+      const modal = document.getElementById("modalAdmin");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    async function prosesLoginAdmin() {
+      const sekarang = Date.now();
+      const errorEl = document.getElementById("pesanErrorAdmin");
+
+      if (sekarang < adminCooldownUntil) {
+        const sisaDetik = Math.ceil((adminCooldownUntil - sekarang) / 1000);
+        errorEl.innerText = `Terlalu banyak percobaan gagal. Coba lagi dalam ${sisaDetik} detik.`;
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      const pass = document.getElementById("inputPasswordAdmin").value;
+      const inputHash = await hashPassword(pass);
+
+      if (inputHash && inputHash === adminPasswordHashHex) {
+        gagalAdminCount = 0;
+        adminCooldownUntil = 0;
+        isAdmin = true;
+        sessionStorage.setItem("is_admin_logged_in", "true");
+        tutupModalAdmin();
+        perbaruiTampilanAkses();
+      } else {
+        gagalAdminCount += 1;
+        if (gagalAdminCount >= 4) {
+          adminCooldownUntil = Date.now() + 20000;
+          gagalAdminCount = 0;
+          errorEl.innerText = "Password salah 4x. Login dikunci sementara 20 detik.";
+        } else {
+          const sisaPercobaan = 4 - gagalAdminCount;
+          errorEl.innerText = `Password admin salah. Sisa percobaan sebelum jeda: ${sisaPercobaan}x.`;
+        }
+        errorEl.classList.remove("hidden");
+      }
+    }
+
+    function logoutAdmin() {
+      isAdmin = false;
+      sessionStorage.removeItem("is_admin_logged_in");
+      perbaruiTampilanAkses();
+    }
+
+    function terapkanWatermarkKeGambar(imageSrc, config = WATERMARK_DEFAULT) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = function () {
+          try {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d", { willReadFrequently: false });
+
+            const maxDim = 640;
+            const terbesar = Math.max(img.width || 1, img.height || 1);
+            const scale = terbesar > maxDim ? maxDim / terbesar : 1;
+
+            canvas.width = Math.max(1, Math.round((img.width || 640) * scale));
+            canvas.height = Math.max(1, Math.round((img.height || 480) * scale));
+
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const teks = String(config.text || WATERMARK_DEFAULT.text).trim().toUpperCase();
+            if (teks) {
+              const alpha = Math.min(0.95, Math.max(0.1, (Number(config.opacity) || 45) / 100));
+              const scaleFactor = (Number(config.scale) || 100) / 100;
+              const baseFontSize = Math.max(14, Math.floor(canvas.width / 16));
+              const fontSize = Math.max(12, Math.min(90, Math.round(baseFontSize * scaleFactor)));
+              const style = config.style || "diagonal";
+
+              ctx.font = `bold ${fontSize}px sans-serif`;
+              ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+              ctx.strokeStyle = `rgba(0, 0, 0, ${Math.min(0.85, alpha * 0.75)})`;
+              ctx.lineWidth = Math.max(1, Math.floor(fontSize / 14));
+
+              if (style === "center") {
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                const boxWidth = Math.min(canvas.width * 0.85, ctx.measureText(teks).width + fontSize * 2);
+                const boxHeight = fontSize * 2.2;
+                ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(0.65, alpha * 0.7)})`;
+                ctx.fillRect(
+                  canvas.width / 2 - boxWidth / 2,
+                  canvas.height / 2 - boxHeight / 2,
+                  boxWidth,
+                  boxHeight
+                );
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.strokeText(teks, canvas.width / 2, canvas.height / 2);
+                ctx.fillText(teks, canvas.width / 2, canvas.height / 2);
+              } else if (style === "bottom-right") {
+                ctx.textAlign = "right";
+                ctx.textBaseline = "bottom";
+                const pad = Math.max(12, Math.round(canvas.width * 0.03));
+                ctx.strokeText(teks, canvas.width - pad, canvas.height - pad);
+                ctx.fillText(teks, canvas.width - pad, canvas.height - pad);
+              } else {
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate((-28 * Math.PI) / 180);
+
+                const stepX = Math.max(130, fontSize * 9);
+                const stepY = Math.max(60, fontSize * 4);
+                const limitX = Math.ceil(canvas.width * 0.9);
+                const limitY = Math.ceil(canvas.height * 0.9);
+
+                for (let x = -limitX; x <= limitX; x += stepX) {
+                  for (let y = -limitY; y <= limitY; y += stepY) {
+                    ctx.strokeText(teks, x, y);
+                    ctx.fillText(teks, x, y);
+                  }
+                }
+                ctx.restore();
+              }
+            }
+
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.72);
+            canvas.width = 0;
+            canvas.height = 0;
+            resolve(dataUrl);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = function (err) {
+          reject(err);
+        };
+        img.src = imageSrc;
+      });
+    }
+
+    function bacaAmbilKonfigurasiUpload() {
+      const opacity = Number(document.getElementById("inputWatermarkOpacity").value) || 45;
+      const scale = Number(document.getElementById("inputWatermarkScale").value) || 100;
+      document.getElementById("labelUploadOpacity").innerText = `${opacity}%`;
+      document.getElementById("labelUploadScale").innerText = `${scale}%`;
+
+      return {
+        text: document.getElementById("inputWatermarkText").value.trim() || WATERMARK_DEFAULT.text,
+        style: document.getElementById("inputWatermarkStyle").value || "diagonal",
+        opacity,
+        scale
+      };
+    }
+
+    async function perbaruiPreviewUpload() {
+      const cfg = bacaAmbilKonfigurasiUpload();
+      if (!rawUploadImageDataUrl) return;
+
+      try {
+        const hasil = await terapkanWatermarkKeGambar(rawUploadImageDataUrl, cfg);
+        currentWatermarkedUploadUrl = hasil;
+        document.getElementById("imgPreviewUpload").src = hasil;
+        document.getElementById("wrapPreviewUpload").classList.remove("hidden");
+      } catch (_) {
+        document.getElementById("wrapPreviewUpload").classList.add("hidden");
+      }
+    }
+
+    function muatGambarUpload(event) {
+      const file = event.target.files?.[0];
+      if (!file) {
+        rawUploadImageDataUrl = "";
+        currentWatermarkedUploadUrl = "";
+        document.getElementById("wrapPreviewUpload").classList.add("hidden");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        rawUploadImageDataUrl = e.target.result;
+        perbaruiPreviewUpload();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function resetUploadWatermark() {
+      document.getElementById("inputWatermarkText").value = WATERMARK_DEFAULT.text;
+      document.getElementById("inputWatermarkStyle").value = WATERMARK_DEFAULT.style;
+      document.getElementById("inputWatermarkOpacity").value = WATERMARK_DEFAULT.opacity;
+      document.getElementById("inputWatermarkScale").value = WATERMARK_DEFAULT.scale;
+      perbaruiPreviewUpload();
+    }
+
+    function bukaModalEditWatermark(index) {
+      if (!isAdmin) return alert("Akses ditolak. Hanya Admin yang dapat mengedit watermark.");
+      const foto = daftarFoto[index];
+      if (!foto) return;
+
+      editWatermarkIndex = index;
+      const cfg = foto.watermark || WATERMARK_DEFAULT;
+
+      document.getElementById("editWmJudulFoto").innerText = foto.judul;
+      document.getElementById("editWmText").value = cfg.text || WATERMARK_DEFAULT.text;
+      document.getElementById("editWmStyle").value = cfg.style || "diagonal";
+      document.getElementById("editWmOpacity").value = cfg.opacity || 45;
+      document.getElementById("editWmScale").value = cfg.scale || 100;
+
+      const modal = document.getElementById("modalEditWatermark");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+
+      perbaruiPreviewEditWm();
+    }
+
+    function tutupModalEditWatermark() {
+      const modal = document.getElementById("modalEditWatermark");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+      editWatermarkIndex = null;
+      currentPreviewEditWmUrl = "";
+    }
+
+    async function perbaruiPreviewEditWm() {
+      if (editWatermarkIndex === null) return;
+      const foto = daftarFoto[editWatermarkIndex];
+      if (!foto) return;
+
+      const opacity = Number(document.getElementById("editWmOpacity").value) || 45;
+      const scale = Number(document.getElementById("editWmScale").value) || 100;
+      document.getElementById("labelEditWmOpacity").innerText = `${opacity}%`;
+      document.getElementById("labelEditWmScale").innerText = `${scale}%`;
+
+      const cfg = {
+        text: document.getElementById("editWmText").value.trim() || WATERMARK_DEFAULT.text,
+        style: document.getElementById("editWmStyle").value || "diagonal",
+        opacity,
+        scale
+      };
+
+      const sumberGambar = foto.rawImage || foto.thumbnail;
+      try {
+        const hasil = await terapkanWatermarkKeGambar(sumberGambar, cfg);
+        currentPreviewEditWmUrl = hasil;
+        document.getElementById("imgPreviewEditWm").src = hasil;
+      } catch (_) {}
+    }
+
+    function simpanEditWatermark() {
+      if (!isAdmin || editWatermarkIndex === null) return;
+      const foto = daftarFoto[editWatermarkIndex];
+      if (!foto) return;
+
+      const cfg = {
+        text: document.getElementById("editWmText").value.trim() || WATERMARK_DEFAULT.text,
+        style: document.getElementById("editWmStyle").value || "diagonal",
+        opacity: Number(document.getElementById("editWmOpacity").value) || 45,
+        scale: Number(document.getElementById("editWmScale").value) || 100
+      };
+
+      foto.watermark = cfg;
+      if (currentPreviewEditWmUrl) {
+        foto.thumbnail = currentPreviewEditWmUrl;
+      }
+      foto.isDefaultSample = false;
+
+      simpanData();
+      renderGaleri();
+      tutupModalEditWatermark();
+    }
+
+    function renderGaleri() {
+      const container = document.getElementById("galeri");
+      container.innerHTML = "";
+
+      if (daftarFoto.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-14 bg-gray-900/60 rounded-2xl border border-dashed border-gray-800 text-gray-400 text-sm">
+            Belum ada foto tersedia di galeri saat ini.
+          </div>
+        `;
+        return;
+      }
+
+      daftarFoto.forEach((foto, index) => {
+        const sampleWatermarkOverlay = foto.isDefaultSample && !foto.unlocked
+          ? `<div class="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
+               <span class="text-white/50 font-extrabold text-lg -rotate-12 tracking-widest border-2 border-white/30 bg-black/25 px-3 py-1 rounded">
+                 ${WATERMARK_DEFAULT.text}
+               </span>
+             </div>`
+          : "";
+
+        const tombolAksiAdmin = isAdmin
+          ? `<div class="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+              <button
+                type="button"
+                onclick="bukaModalEditWatermark(${index})"
+                title="Custom Watermark Thumbnail"
+                class="bg-yellow-500 hover:bg-yellow-600 text-black text-xs px-2.5 py-1.5 rounded-lg font-bold shadow transition cursor-pointer"
+              >
+                Watermark
+              </button>
+              <button
+                type="button"
+                onclick="hapusFoto(${index})"
+                title="Hapus Foto & Thumbnail"
+                class="bg-red-600 hover:bg-red-700 text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold shadow transition cursor-pointer"
+              >
+                Hapus
+              </button>
+            </div>`
+          : "";
+
+        container.innerHTML += `
+          <div class="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 shadow-lg flex flex-col justify-between relative">
+            <div>
+              ${tombolAksiAdmin}
+
+              <div class="relative h-56 w-full overflow-hidden bg-gray-950">
+                <img
+                  src="${foto.thumbnail}"
+                  alt="${foto.judul}"
+                  oncontextmenu="return false;"
+                  class="w-full h-full object-cover"
+                />
+                ${sampleWatermarkOverlay}
+                <div class="absolute bottom-2.5 left-2.5 text-xs px-2.5 py-1 rounded-md font-semibold ${
+                  foto.unlocked
+                    ? "bg-emerald-600/90 text-white"
+                    : "bg-black/75 text-yellow-400"
+                }">
+                  ${foto.unlocked ? "Terbuka" : "Terkunci"}
+                </div>
+              </div>
+
+              <div class="p-4">
+                <h3 class="font-bold text-base text-white truncate">${foto.judul}</h3>
+                <p class="text-gray-400 text-sm mt-1">${foto.harga}</p>
+              </div>
+            </div>
+
+            <div class="px-4 pb-4">
+              ${
+                foto.unlocked
+                  ? `<a
+                      href="${foto.driveLink}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="block text-center w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold text-sm transition"
+                    >
+                      Buka Foto di Google Drive
+                    </a>`
+                  : `<button
+                      type="button"
+                      onclick="bukaModalBayar(${index})"
+                      class="w-full bg-yellow-500 hover:bg-yellow-600 text-black py-2.5 rounded-xl font-bold text-sm transition cursor-pointer"
+                    >
+                      Bayar untuk Buka
+                    </button>`
+              }
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function bukaFormUpload() {
+      if (!isAdmin) return alert("Akses ditolak. Hanya Admin yang dapat mengunggah thumbnail.");
+      document.getElementById("formUpload").classList.toggle("hidden");
+    }
+
+    async function tambahFoto() {
+      if (!isAdmin) return alert("Akses ditolak. Hanya Admin yang dapat mengunggah thumbnail.");
+
+      const judul = document.getElementById("inputJudul").value.trim();
+      const harga = document.getElementById("inputHarga").value.trim() || "Rp 15.000";
+      const driveLink = document.getElementById("inputDrive").value.trim();
+      const kodeCustom = document.getElementById("inputKode").value.trim().toUpperCase();
+      const fileInput = document.getElementById("inputThumb").files[0];
+
+      if (!judul || !rawUploadImageDataUrl || !driveLink) {
+        return alert("Harap lengkapi Judul Foto, File Thumbnail, dan Link Google Drive.");
+      }
+
+      if (!adalahLinkGoogleDriveValid(driveLink)) {
+        return alert("Link Google Drive harus menggunakan https://drive.google.com/...");
+      }
+
+      const btn = document.getElementById("btnSimpan");
+      const teksAsli = btn.innerText;
+      btn.innerText = "Menyimpan Thumbnail...";
+      btn.disabled = true;
+
+      try {
+        const cfg = bacaAmbilKonfigurasiUpload();
+        const finalThumbnail = await terapkanWatermarkKeGambar(rawUploadImageDataUrl, cfg);
+
+        daftarFoto.unshift({
+          id: Date.now(),
+          judul,
+          harga,
+          thumbnail: finalThumbnail,
+          rawImage: finalThumbnail,
+          watermark: cfg,
+          isDefaultSample: false,
+          driveLink,
+          kode: kodeCustom || PAYMENT_CONFIG_RESMI.defaultCode,
+          unlocked: false
+        });
+
+        const tersimpan = simpanData();
+        if (!tersimpan) {
+          daftarFoto.shift();
+          return;
+        }
+
+        renderGaleri();
+
+        document.getElementById("inputJudul").value = "";
+        document.getElementById("inputHarga").value = "";
+        document.getElementById("inputDrive").value = "";
+        document.getElementById("inputKode").value = "";
+        if (fileInput) document.getElementById("inputThumb").value = "";
+        rawUploadImageDataUrl = "";
+        currentWatermarkedUploadUrl = "";
+        document.getElementById("wrapPreviewUpload").classList.add("hidden");
+        resetUploadWatermark();
+        bukaFormUpload();
+      } catch (_) {
+        alert("Gagal memproses gambar thumbnail. Coba pilih file gambar JPG/PNG lain atau buka halaman lewat hosting/HTTP.");
+      } finally {
+        btn.innerText = teksAsli;
+        btn.disabled = false;
+      }
+    }
+
+    function hapusFoto(index) {
+      if (!isAdmin) return alert("Akses ditolak. Hanya Admin yang dapat menghapus foto.");
+
+      const foto = daftarFoto[index];
+      if (!foto) return;
+
+      if (confirm(`Hapus "${foto.judul}" beserta thumbnail-nya?`)) {
+        daftarFoto.splice(index, 1);
+        simpanData();
+        renderGaleri();
+      }
+    }
+
+    function perbaruiTampilanRekening() {
+      const dataRek = ambilRekeningAman(metodeAktif);
+      const tabBca = document.getElementById("tabBca");
+      const tabGopay = document.getElementById("tabGopay");
+
+      if (metodeAktif === "gopay") {
+        tabGopay.className = "py-2 px-3 rounded-xl text-xs font-bold border transition cursor-pointer bg-sky-600 border-sky-500 text-white";
+        tabBca.className = "py-2 px-3 rounded-xl text-xs font-bold border transition cursor-pointer bg-gray-950 border-gray-700 text-gray-300 hover:bg-gray-800";
+      } else {
+        tabBca.className = "py-2 px-3 rounded-xl text-xs font-bold border transition cursor-pointer bg-blue-600 border-blue-500 text-white";
+        tabGopay.className = "py-2 px-3 rounded-xl text-xs font-bold border transition cursor-pointer bg-gray-950 border-gray-700 text-gray-300 hover:bg-gray-800";
+      }
+
+      document.getElementById("labelJenisAkun").innerText = dataRek.labelNomor;
+      document.getElementById("rekMetodeBadge").innerText = dataRek.namaMetode;
+      document.getElementById("rekNomor").innerText = dataRek.nomor;
+      document.getElementById("rekNama").innerText = dataRek.atasNama;
+      document.getElementById("btnSalinRek").innerText = "Salin";
+
+      if (fotoDipilihIndex !== null && daftarFoto[fotoDipilihIndex]) {
+        const foto = daftarFoto[fotoDipilihIndex];
+        const pesanWa = encodeURIComponent(
+          `Halo kak, saya sudah bayar via ${dataRek.namaMetode} (${dataRek.nomor}) sebesar ${foto.harga} untuk foto "${foto.judul}". Mohon kirimkan kode konfirmasinya ya.`
+        );
+        document.getElementById("btnWa").href = `https://wa.me/${PAYMENT_CONFIG_RESMI.wa}?text=${pesanWa}`;
+      }
+    }
+
+    function pilihMetode(metode) {
+      metodeAktif = metode;
+      perbaruiTampilanRekening();
+    }
+
+    function bukaModalBayar(index) {
+      if (!validasiIntegritasKonfigurasi()) {
+        return alert("Konfigurasi pembayaran tidak valid. Hubungi admin.");
+      }
+
+      fotoDipilihIndex = index;
+      const foto = daftarFoto[index];
+      metodeAktif = "bca";
+
+      document.getElementById("modalInfoFoto").innerText = `${foto.judul} — ${foto.harga}`;
+      document.getElementById("inputKodeKonfirmasi").value = "";
+      document.getElementById("pesanErrorKode").classList.add("hidden");
+
+      perbaruiTampilanRekening();
+
+      const modal = document.getElementById("modalBayar");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function salinRekening() {
+      if (!validasiIntegritasKonfigurasi()) return;
+      const dataRek = ambilRekeningAman(metodeAktif);
+      const nomorBersih = String(dataRek.nomor || "").trim();
+      const btn = document.getElementById("btnSalinRek");
+
+      const tandaiTersalin = () => {
+        if (!btn) return;
+        btn.innerText = "Tersalin";
+        setTimeout(() => {
+          btn.innerText = "Salin";
+        }, 2000);
+      };
+
+      const salinManual = () => {
+        const tempInput = document.createElement("textarea");
+        tempInput.value = nomorBersih;
+        tempInput.setAttribute("readonly", "");
+        tempInput.style.position = "fixed";
+        tempInput.style.top = "-9999px";
+        tempInput.style.left = "-9999px";
+        document.body.appendChild(tempInput);
+
+        tempInput.select();
+        tempInput.setSelectionRange(0, tempInput.value.length);
+
+        try {
+          const berhasil = document.execCommand("copy");
+          if (berhasil) {
+            tandaiTersalin();
+          } else {
+            prompt("Salin nomor tujuan secara manual:", nomorBersih);
+          }
+        } catch (_) {
+          prompt("Salin nomor tujuan secara manual:", nomorBersih);
+        } finally {
+          document.body.removeChild(tempInput);
+        }
+      };
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard
+          .writeText(nomorBersih)
+          .then(tandaiTersalin)
+          .catch(salinManual);
+      } else {
+        salinManual();
+      }
+    }
+
+    function tutupModal() {
+      const modal = document.getElementById("modalBayar");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+      fotoDipilihIndex = null;
+    }
+
+    function verifikasiDanBuka() {
+      if (fotoDipilihIndex === null) return;
+      if (!validasiIntegritasKonfigurasi()) return;
+
+      const sekarang = Date.now();
+      const errorEl = document.getElementById("pesanErrorKode");
+
+      if (sekarang < kodeCooldownUntil) {
+        const sisaDetik = Math.ceil((kodeCooldownUntil - sekarang) / 1000);
+        errorEl.innerText = `Terlalu banyak percobaan salah. Tunggu ${sisaDetik} detik sebelum mencoba lagi.`;
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      const kodeInput = document.getElementById("inputKodeKonfirmasi").value.trim().toUpperCase();
+      const kodeBenar = String(
+        daftarFoto[fotoDipilihIndex].kode || PAYMENT_CONFIG_RESMI.defaultCode
+      )
+        .trim()
+        .toUpperCase();
+
+      if (kodeInput && kodeInput === kodeBenar) {
+        gagalKodeCount = 0;
+        kodeCooldownUntil = 0;
+        daftarFoto[fotoDipilihIndex].unlocked = true;
+        simpanData();
+        renderGaleri();
+        tutupModal();
+      } else {
+        gagalKodeCount += 1;
+        if (gagalKodeCount >= 4) {
+          kodeCooldownUntil = Date.now() + 20000;
+          gagalKodeCount = 0;
+          errorEl.innerText = "Kode salah 4x. Percobaan dijeda 20 detik demi keamanan.";
+        } else {
+          errorEl.innerText = "Kode konfirmasi salah. Kirim bukti pembayaran ke WhatsApp untuk mendapatkan kode yang valid.";
+        }
+        errorEl.classList.remove("hidden");
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      adminPasswordHashHex = await hashPassword(ADMIN_PASSWORD_PLAIN);
+      terapkanLinkSosmed();
+      validasiIntegritasKonfigurasi();
+      perbaruiTampilanAkses();
+
+      setInterval(() => {
+        validasiIntegritasKonfigurasi();
+      }, 2500);
+
+      const loader = document.getElementById("loadingScreen");
+      setTimeout(() => {
+        if (!loader) return;
+        loader.classList.add("opacity-0");
+        setTimeout(() => {
+          loader.classList.add("hidden");
+        }, 500);
+      }, 650);
+    });
+  </script>
+</body>
+</html>
